@@ -14,7 +14,7 @@ $state = $_GET['state'] ?? '';
 // Appwrite config
 $endpoint = 'https://fra.cloud.appwrite.io/v1';
 $projectId = '6a40566e0000ce24258e';
-$apiKey = 'standard_e...';  // ← PUT YOUR FULL API KEY HERE!
+$apiKey = 'standard_ea3534c309f3d66752d8bfcb09702bb24ca55396f2283e8b7a9c2d30fb63ae94faf5c4f34a41766305d59cb0bfa3caba01941624994ddb2d91769af6f2af25b22f6d21609df574aa020664440f3b7d496cd591ce3a960e5822acb6eae7ab85851b88115ba7614aad28d4fa6a9eeffe3e22f19774348f2de9b27a1a543f077866';  // ← PUT YOUR FULL API KEY HERE!
 $databaseId = '6a4056fe0011aa4462d6';
 $collectionId = '6a4057910024491b6393';
 
